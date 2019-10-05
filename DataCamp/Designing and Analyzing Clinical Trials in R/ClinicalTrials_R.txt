@@ -1,0 +1,435 @@
+#Explore the Acupuncture dataset with the str() function 
+str(Acupuncture)
+
+#Display the treatment group frequencies
+table(Acupuncture$treatment.group)
+
+#Generate summaries of the variables by treatment group and save results as baselines
+baselines <- compareGroups(treatment.group ~ score.baseline + age + sex, data = Acupuncture)
+
+#Use the createTable function to display the results saved in baselines
+baseline.table <- createTable(baselines, show.ratio = FALSE, show.p.overall=FALSE)
+
+#Display the created summary table
+baseline.table
+
+#Exploration of Continous Endpoints
+#Generate a variable for the change from baseline at 12 months
+Acupuncture$diff.month12 <- Acupuncture$score.month12 - Acupuncture$score.baseline
+
+#Use the NEW variable to generate the percentage change from baseline at 12 months
+Acupuncture$pct.month12 <- Acupuncture$diff.month12/Acupuncture$score.baseline*100
+
+#Generate a histogram for percentage change from baseline within each treatment group
+ggplot(data=Acupuncture, aes(x=pct.month12)) + 
+  geom_histogram(fill="white", color="black") + facet_wrap( ~ treatment.group) +
+  xlab("Percentage Change from Baseline at Month 12")
+
+## Exploration of Binary Endpoints
+Acupuncture %>% 
+  # Filter for rows where pct.month12 is not missing
+  filter(!is.na(pct.month12)) %>%
+  # Generate a binary response variable as a factor
+  mutate(
+    resp35.month12 = factor(
+      # Use the condition pct.month12 less than -35
+      ifelse(pct.month12 < -35, "greater than 35%", "less than or eq to 35%")
+    )
+  ) %>%
+  # Count the values of resp35.month12
+  count(resp35.month12) %>%
+  mutate(pct = 100 * n / sum(n)) 
+
+## Exploration of Composite Endpoints
+Acupuncture <- Acupuncture %>% 
+  mutate(
+    # Dichotomize the variable for complementary therapist visits
+    any.therap.visits = factor(
+      # Check for zero visits
+      ifelse(total.therap.visits == 0, "Did not visit CT", "Visited CT")
+    ),
+    # Generate a combined binary endpoint for having any professional visits
+    combined = factor(
+      ifelse(
+        # Check for not visiting complementary therapist
+        any.therap.visits == "Did not visit CT" & 
+          # ... and not visiting GP
+          any.gp.visits == "Did not visit GP" & 
+          # ... and not visiting specialist
+          any.spec.visits == "Did not visit specialist",
+        "No visits", 
+        "At least one visit"
+      ),
+      levels = c("No visits", "At least one visit")
+    )
+  )
+
+# Tabulate the new composite endpoint
+table(Acupuncture$combined, useNA = "ifany")
+
+## Comparing Means
+#Perform the t-test, assuming the variances are equal in the treatment groups
+t.test(pct.month12~ treatment.group, var.equal=TRUE, data = Acupuncture)
+
+#Use the compareGroups function to save a summary of the results in pct.month12.test
+pct.month12.test <- compareGroups(treatment.group ~ pct.month12 , data = Acupuncture)
+
+#Use the createTable function to summarize and store the results saved in pct.month12.test.
+pct.month12.table <- createTable(pct.month12.test, show.ratio = FALSE, show.p.overall=TRUE)
+
+#Display the results of pct.month12.table
+pct.month12.table
+
+## Comparing Distribution
+#Use a boxplot to visualize the total days off sick by treatment group.  
+ggplot(data=Acupuncture, aes(x=treatment.group, y=total.days.sick)) + 
+  geom_boxplot(fill="white", color="black") +
+  ylab("Total days off sick") +  xlab("Treatment group")
+
+#Use the Wilcoxon Rank Sum test to compare the two distributions.
+wilcox.test(total.days.sick~treatment.group, data=Acupuncture)
+
+## Comparing Proportions
+#Perform the test of proportions on resp35.month12 by treatment.group.
+prop.test(table(Acupuncture$treatment.group, Acupuncture$resp35.month12), correct=FALSE)
+
+#Use the tidy function to store and display a summary of the test results.
+resp35.month12.test <- tidy(prop.test(table(Acupuncture$treatment.group, Acupuncture$resp35), correct=FALSE))
+resp35.month12.test
+
+#Calculate the treatment difference
+resp35.month12.test$estimate1 - resp35.month12.test$estimate2
+
+
+## Simple Randomization
+#Generate a vector to store treatment labels “A” and “B”
+set.seed(123)
+arm<-c("A","B")
+
+#Randomly select treatment arm 14 times with the sample function and store in a vector
+simple <- sample(arm, 14, replace=TRUE)
+
+#Display the contents of the vector
+simple
+
+#Tabulate the numbers assigned to each treatment.
+table(simple)
+
+## Block Randomization
+#Use the blockrand function for 14 patients, two arms and block size 2.
+set.seed(123)
+block2 <- blockrand(n=14, num.levels = 2,  block.prefix='B', block.sizes = c(1,1))
+
+#Display the list.
+block2
+
+#Tabulate the numbers per treatment arm.
+table(block2$treatment)
+
+## Stratified Randomization
+#Use block randomization to produce lists of length 100 and random block sizes between 2 and 8.
+set.seed(123)
+under55 <- blockrand(n=100, num.levels = 2, block.sizes = c(1,2,3,4), id.prefix='U55', block.prefix='U55',stratum='<55y')
+above55 <- blockrand(n=100, num.levels = 2, block.sizes = c(1,2,3,4), id.prefix='A55', block.prefix='A55',stratum='>=55y')
+
+#Explore the two lists 
+head(under55)
+head(above55)
+
+#Tabulate the numbers assigned to each treatment within each strata
+table(under55$treatment)
+table(above55$treatment)
+
+## Factorial Design:
+#Explore the fact.data using the head function.
+head(fact.data)
+
+#Display the numbers with and without infections by supplement combination.
+fact.data %>% count(glutamine, selenium, infection)
+
+#Display the numbers and proportions with/without infections for those given glutamine.
+fact.data %>% group_by(infection) %>% filter(glutamine=="Yes") %>%
+  summarize (n = n()) %>% mutate(prop = n / sum(n))
+
+#Display the numbers and proportions with/without infections for those given selenium.
+fact.data %>% group_by(infection) %>% filter(selenium=="Yes") %>%
+  summarize (n = n()) %>% mutate(prop = n / sum(n))
+
+## Factorial (Generating Odds):
+#Calculate the effect of glutamine on infection
+oddsratio.wald(fact.data$glutamine, fact.data$infection)
+
+#Calculate the effect of selenium on infection
+oddsratio.wald(fact.data$selenium, fact.data$infection)
+
+## Equivalence Trials
+#Use the head function to explore the relapse.trial dataset
+head(relapse.trial)
+
+#Calculate the number of percentages of relapse by treatment group
+relapse.trial %>% group_by(Treatment, Relapse) %>% 
+  summarize(n = n()) %>% mutate(pct = (n / sum(n))*100)
+
+#Calculate the two-sided 90% confidence interval for the difference
+prop.test(table(relapse.trial$Treatment, relapse.trial$Relapse), 
+          alternative = "two.sided", conf.level=0.9, correct=FALSE)
+
+## Bioequivalnce Trials - Concentration Profiles
+#Display the dataset contents
+head(PKData)
+
+#Store a numeric version of the concentration variable in plasma.conc.n
+PKData$plasma.conc.n <- as.numeric(PKData$plasma.conc)
+
+#Use ggplot to plot the concentration levels against relative time
+ggplot(data=PKData, aes(x=rel.time, y=plasma.conc.n)) + 
+  geom_line() +
+  geom_point() + ggtitle("Individual Concentration Profile") +
+  xlab("Time Relative to First Dose, h") + ylab("Plasma Concentration, ng/mL")
+
+## Pharmak Parameters
+#Explore the variable names using the str function
+str(PKData)
+
+#Use the summary function to find the max concentration level
+summary(PKData$plasma.conc.n)
+
+#Use pk.calc.tmax to find when Cmax occurred, specifying the concentration and time.
+pk.calc.tmax(PKData$plasma.conc.n, PKData$rel.time)
+
+#Use pk.calc.auc to estimate AUC between 0.25 and 12hrs.
+pk.calc.auc(PKData$plasma.conc.n, PKData$rel.time, interval=c(0.25, 12), method="linear")
+
+## Sample Size for Comparing Means (Here we will calculate the sample size needed for a trial that will use a two-sided t-test in the analysis)
+#Generate the sample size for delta of 1, with SD of 3 and 80% power.
+ss1 <- power.t.test(delta=1, sd=3, power=0.80)
+ss1
+
+#Round up and display the numbers needed per group
+ceiling(ss1$n)
+
+#Use the sample size from above to show that it provides 80% power
+power.t.test(n=ceiling(ss1$n), delta=1, sd=3)
+
+## Sample Size & Treatment Difference (The clinician is unsure of the expected treatment difference but believes it would be between 0.5 and 2.0. Using 80% power and standard deviation of 3, provide them with a set of sample sizes required for this range of differences as a table and in a plot)
+
+#Generate a vector containing values between 0.5 and 2.0, incrementing by 0.25
+delta <- seq(0.5, 2.0, 0.25)
+npergp <- NULL
+
+#Specify the standard deviation and power
+for(i in 1:length(delta)){
+  npergp[i] <- ceiling(power.t.test(delta = delta[i], sd = 3, power = 0.8)$n)
+}
+
+#Create a data frame from the deltas and sample sizes
+sample.sizes <- data.frame(delta, npergp)
+
+#Plot the data
+ggplot(data=sample.sizes, aes(x=delta, y=npergp)) + geom_line() + geom_point() + 
+  ggtitle("Sample Size Scenarios") + xlab("Treatment Difference") + ylab("Patients per Group")
+
+
+## Sample Size for Comparing Prop.
+#Use the power.prop.test to generate sample sizes for the proportions
+power.prop.test(p1 = 0.4, p2 = 0.6, power = 0.8)
+
+#Find the minimum detectable percentage for the above using 150 patients per group.
+power.prop.test(p1 = 0.4, power = 0.8, n = 150)$p2*100
+
+
+## Sample Size for Unequal Groups
+#Use 90% power, delta 1.5, standard deviations of 2.5, fraction of 0.5
+unequalgps<-n.ttest(power = 0.9, alpha = 0.05, mean.diff = 1.5, sd1 = 2.5, sd2 = 2.5, k = 0.5, design = "unpaired", fraction = "unbalanced")
+unequalgps
+
+
+## Sample S. for One-sided Groups
+#Generate sample sizes comparing the proportions using a two-sided test
+two.sided<-power.prop.test(p1=0.1, p2=0.3, power=0.8, alternative = "two.sided")
+two.sided
+ceiling(two.sided$n)
+
+#Repeat using a one-sided test
+one.sided<-power.prop.test(p1=0.1, p2=0.3, power=0.8, alternative = "one.sided")
+one.sided
+ceiling(one.sided$n)
+
+#Display the reduction per group
+ceiling(two.sided$n)- ceiling(one.sided$n)
+
+
+## Stopping rules
+#Use the gsDesign function to generate the p-values for four analyses under the Pocock rule
+Pocock <- gsDesign(k=4, test.type=2, sfu="Pocock")
+Pocock
+2*(1-pnorm(Pocock$upper$bound))
+
+#Repeat for the the O'Brein & Fleming rule
+OF <- gsDesign(k=4, test.type=2, sfu="OF")
+OF
+2*(1-pnorm(OF$upper$bound))
+
+## Sample Size Adj for Interim Analyses (A trial was originally planned to have no interim analyses. A sample size calculation estimated 500 patients were needed for 90% power at 5% siginificant level.
+##Here we will derive the new sample size requirements if three interim analyses are planned with the potential to stop early under the Pocock and OF)
+#Use the gsDesign function to generate the sample sizes at each stage under the Pocock rule
+Pocock.ss <- gsDesign(k=4, test.type=2, sfu="Pocock", n.fix=500, beta=0.1)
+ceiling(Pocock.ss$n.I)
+
+#Repeat for the the O'Brein-Fleming rule
+OF.ss <- gsDesign(k=4, test.type=2, sfu="OF", n.fix=500, beta=0.1)
+ceiling(OF.ss$n.I)
+
+## Sample Size Calculation
+## Sample Size for Equivalence Binary Outcomes
+#Re-familiarize yourself with the powerTOSTtwo.prop() function
+?powerTOSTtwo.prop()
+
+#Find the sample size  per group for expected rates of 60%, 4% delta, 90% power and 5% significance level.
+powerTOSTtwo.prop(alpha = 0.05, statistical_power = 0.9, prop1 = 0.6, prop2 = 0.6, low_eqbound_prop = -0.04, high_eqbound_prop = +0.04)
+
+#Find the power if the above trial is limited to 2500 per group
+powerTOSTtwo.prop(alpha = 0.05, N=2500, prop1 = 0.6, prop2 = 0.6, low_eqbound_prop = -0.04, high_eqbound_prop = 0.04)
+
+## SSize for Continous Outcomes
+#Find the sample size for a standard deviation of 10, delta of 2, 80% power and 5% significance level.
+powerTOSTtwo.raw(alpha=0.05, statistical_power=0.8, sdpooled=10, low_eqbound=-2, high_eqbound=2)
+
+#Find the sample sizes based on standard deviations between 7 and 13.
+stdev <- seq(7, 13, 1)
+npergp <- NULL
+for(i in 1:length(stdev)){
+  npergp[i] <- ceiling(powerTOSTtwo.raw(alpha=0.05, statistical_power=0.8, sdpooled=stdev[i], low_eqbound=-2, high_eqbound=2))
+}
+sample.sizes <- data.frame(stdev, npergp)
+
+#Plot npergp against stdev
+ggplot(data=sample.sizes, aes(x=stdev, y=npergp)) +   geom_line()+
+  geom_point()+ ggtitle("Equivalence Sample Size Scenarios") +
+  xlab("Standard Deviation") + ylab("Patients per Group")
+
+## Regression Analyis
+## Multiple Reg An
+#Explore the dataset with the head function
+head(Acupuncture)
+
+#Use the relevel function to set Control as reference group
+Acupuncture$treatment.group <- relevel(Acupuncture$treatment.group, ref="Control")
+
+#Use lm to run and store the model in linreg1
+linreg1 <- lm(pct.month12 ~ treatment.group + sex +  score.baseline.4, Acupuncture, na.action = na.exclude)
+
+#Display the results of linreg1
+summary(linreg1)
+
+## Model Prediction 
+#Explore the variable names with the str function
+str(Acupuncture)
+
+#Use the relevel function to set Control as reference group
+Acupuncture$treatment.group <- relevel(Acupuncture$treatment.group, ref="Control")
+
+## In the previous exercise, the multiple linear regression provided no evidence for an association between sex and the endpoint, so it can be removed from the model.
+#Use lm to run and store the model in linreg2
+linreg2 <- lm(pct.month12 ~ treatment.group +  score.baseline.4, Acupuncture, na.action = na.exclude)
+
+#Display the results of linreg2
+summary(linreg2)
+
+#Add the predicted values to the Acupuncture dataset for linreg2 using the predict function 
+Acupuncture$pred.linreg2 <- predict(linreg2)
+
+#Plot the predicted values against baseline score quartile grouping by treatment.
+ggplot(data = subset(Acupuncture, !is.na(pred.linreg2)), 
+       aes(x = score.baseline.4 , y = pred.linreg2, group = treatment.group)) + 
+  geom_line(aes(color = treatment.group)) +
+  geom_point(aes(color = treatment.group)) + 
+  ggtitle("Predicted Values from Linear Regression Model") + 
+  xlab("Baseline Score Quartile") + 
+  ylab("Percentage Change from Baseline at M12")
+
+
+## Multiple LOGISTIC REG
+#Use the relevel function to set "Control" as the reference for treatment
+Acupuncture$treatment.group <- relevel(Acupuncture$treatment.group, ref="Control")
+
+#Use the relevel function to set "less than or eq to 35%" as the reference for resp35.month12
+Acupuncture$resp35.month12 <- relevel(Acupuncture$resp35.month12, ref="less than or eq to 35%")
+
+#Use glm to run and store the model in logreg1
+logreg1 <- glm(resp35.month12 ~ treatment.group + sex  + score.baseline.4, family=binomial(link="logit"), Acupuncture)
+
+#Display the results of logreg1
+summary(logreg1)
+
+#Display the odds ratio and 95% CI for Acupuncture vs Control
+exp(coefficients(logreg1)[2])
+exp(confint(logreg1)[2,])
+
+## Analysis Sets
+#Tabulate withdrawal.reason
+table(Acupuncture$withdrawal.reason,  useNA="ifany")
+
+#Tabulate completedacupuncturetreatment by treatment.group
+table(Acupuncture$completedacupuncturetreatment, Acupuncture$treatment.group,  useNA="ifany") 
+
+#Create a per protocol flag that is TRUE if patients met the criteria
+Acupuncture$pp <- is.na(withdrawal.reason) & 
+  ((completedacupuncturetreatment==1 & treatment.group=="Acupuncture") |
+     (is.na(completedacupuncturetreatment) & treatment.group=="Control") )
+Acupuncture$pp[is.na(Acupuncture$pp)] <- FALSE
+Acupuncture$pp <- as.factor(Acupuncture$pp)
+
+#Tabulate the per protocol flag
+table(Acupuncture$pp)
+
+## Interaction
+#Use the relevel function to set Control as reference group
+Acupuncture$treatment.group <- relevel(Acupuncture$treatment.group, ref="Control")
+
+#Use lm to run and store the model without interaction in linregnoint
+linregnoint <- lm(pct.month12 ~ treatment.group + score.baseline.4, Acupuncture, na.action = na.exclude)
+
+#Use lm to run and store the model with interaction in linregint
+linregint <- lm(pct.month12 ~ treatment.group*score.baseline.4, Acupuncture, na.action = na.exclude)
+
+#Display the results of linregnoint and linregint
+summary(linregnoint)
+summary(linregint)
+
+#Compare the models with the anova command
+anova(linregnoint, linregint)
+
+## Subgroups
+## (Suppose that in the Acupuncture study, we are interested in seeing if there is a treatment effect in any of the age subgroups of patients for the total number of days off sick)
+#Tabulate the age group variable to view the categories (we can view the diff age cat/age groups)
+table(Acupuncture$age.group)
+
+#Display the adjusted significance level (we divide by the # of age groups)
+0.05/4
+
+#Run the Wilcoxon Rank Sum test in each of the age subgroups
+age <- c("18-34", "35-44", "45-54", "55-65")
+for(group in age){
+  subgroup <- tidy(wilcox.test(total.days.sick ~ treatment.group, 
+                               data = subset(Acupuncture, age.group==group), 
+                               exact=FALSE))
+  print(group)
+  print(subgroup)
+}
+
+## Composite Endpoints
+#Tabulate the combined endpoint by treatment group
+table(Acupuncture$combined, Acupuncture$treatment.group, useNA="ifany")
+
+#Use the relevel function to set Control as reference group
+Acupuncture$treatment.group <- relevel(Acupuncture$treatment.group, ref="Control")
+
+#Use compareGroups to generate and save the treatment effect for the composite endpoint
+combined.test <-compareGroups(treatment.group ~ combined + any.therap.visits + any.gp.visits + any.spec.visits, data = Acupuncture)
+
+# Store the results in a table
+combined.test.table <- createTable(combined.test, show.ratio = TRUE, show.p.overall=FALSE)
+
+#Display the results
+combined.test.table
