@@ -69,4 +69,28 @@ When to stop a trial early: Efficcy, Safety,Futulity or Other factors (cost ..)
 Stopping rules: interim an. often require increased sample size
                 multiple testing increases chance of a Type I error
                 Stopp rules use p-val or test-statistics
-        
+                
+Recap on Equiv Trials: demonstrate that 2 treats produce similar resp and a maximum acceptable difference (delta) specified
+               How can we ESTIMATE the REQUIRED SAMPLE SIZE?:
+                we should have: response rating in the existing drug (let's say 70%)
+                                Fixed delta (5%)
+                                Power (for ex 90%): we want to be 90% sure that the 2-sided 90% IC excludes +/- 5%
+                                Two one-sided tests
+                for continous outcomes:
+                                delta: 3 units
+                                pooled std: 15
+                                Power: 80%
+                                Two one-sided tests
+                                ---> 80% sure that 2-sided 90% CI excludes delta +/- 3
+                 for cluster rand trials:
+                                delta: 1 unit (for ex: "one unit difference in BMI between the 2 interventions)
+                                pooled std: 2.5
+                                avg cluster size: 25
+                                Intraclass corr coeff: 0.1
+                                Power: 90%
+                                
+Regression Analysis: with the continous and nornally distributed endpoint of change from baseline Y we can execute
+                     a simple linear reg to assess treatment effect.
+                     
+Various analysis methods: Intention-to-treat (ITT), Full Analysis Set(FAS), Subgroup Analysis, Interaction
+                                 
