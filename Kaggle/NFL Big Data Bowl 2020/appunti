@@ -1,0 +1,17 @@
+Da rimuovere:
+Season
+Jersey number
+DisplayName
+
+1) capire colonna "OffenseFormation": cosa sono i vari (['SHOTGUN', 'SINGLEBACK', 'JUMBO', 'PISTOL', 'I_FORM', 'ACE', 'WILDCAT', nan, 'EMPTY'] 
+	- ci sono degli NA
+
+2) capire termine "scrimmage": linea immaginaria tra attacco e difesa all'inizio dell'azione
+3) colonna "GameClock": come trattarla? cosa succede tra un quarto e il successivo? come si ricomincia?
+4) dummy per "Team", "PossessionTeam" (forse no), "FieldPosition", "OffenseFormation", 
+5) "NflIdRusher": considerarla come variabile categorica?
+6) splittare colonne "OffensePersonnel" e "DefensePersonnel" (e capire significato)
+7) controllare valori nan
+8) "TimeSnap" e "TimeHandoff"?
+9) Yards - To predict!
+
