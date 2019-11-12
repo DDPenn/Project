@@ -1,0 +1,15 @@
+# Feature engineering ####
+
+- Categorical Encoding:
+	- Label Encoding: trasformare label in numeri
+	- One-hot encoding: variabili dummy
+	- Count Encoding: sostituire alla variabile il numero di occorrenze
+	- Target encoding: sostituire alla variabile la media della variabile target
+	- CatBoost encoding: sostituire alla variabile la media della variabile target delle precedenti osservazioni
+
+- Feature Engineering
+	- interactions: combinare (paste) due variabili categoriche per considerare correlazione tra le due.
+					Di solito si costruiscono interazione per ogni coppia di variabili categoriche
+	- numero di occorrenze nei precedenti N giorni: usare una rolling window di N giorni
+	- tempo (Data) dall'ultimo evento (in una specifica categoria)
+	- trasformazioni di variabili numeriche tramite sqrt() o log()

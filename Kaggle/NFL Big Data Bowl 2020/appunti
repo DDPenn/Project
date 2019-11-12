@@ -1,4 +1,4 @@
-Da rimuovere:
+[FATTO] Da rimuovere:
 Season
 Jersey number
 DisplayName
@@ -12,6 +12,28 @@ DisplayName
 5) "NflIdRusher": considerarla come variabile categorica?
 6) splittare colonne "OffensePersonnel" e "DefensePersonnel" (e capire significato)
 7) controllare valori nan
-8) "TimeSnap" e "TimeHandoff"?
+8) "TimeSnap" e "TimeHandoff"? Tempo di inizio azione e tempo di consegna al running back
 9) Yards - To predict!
 
+PROBLEMI:
+"FieldPosition": metà campo della squadra in cui si trova il giocatore (NA: 6424) -> si può riempire con x del giocatore
+"OffenseFormation": NA = 110
+"DefendersInTHeBox": NA = 66
+
+FEATURES CON VALORI MANCANTI
+
+'Orientation', 'Dir', 'FieldPosition', 'OffenseFormation',
+       'DefendersInTheBox', 'StadiumType', 'GameWeather', 'Temperature',
+       'Humidity', 'WindSpeed', 'WindDirection'
+
+- 'Orientation': pochi NA, rimuovere righe
+- 'Dir': pochi NA, rimuovere righe
+- 'FieldPosition': in che metà campo è il giocatore. Si può inferire dai dati (o rimuovere la feature)
+- 'offenseFormation': si può pensare di lasciare NA o rimuovere righe (110)
+- 'DefendersInTheBox': pochi NA, rimuovere righe (66)
+- 'StadiumType': creare tabellina di mappatura con ['squadra di casa', 'nome stadio', 'stadiumType'] e riempire i valori nulli
+- 'GameWeather': informazioni molto qualitative, meglio rimuovere la feature (per ora)
+- 'Temperature': rimuovere feature
+- 'Humidity': rimuovere feature
+- 'WindSpeed': rimuovere feature
+- 'WindDirection': rimuovere feature
